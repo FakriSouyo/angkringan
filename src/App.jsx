@@ -12,6 +12,7 @@ import Cart from "./components/Cart";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import AdminDashboard from "./components/admin/AdminDashboard";
+import Footer from "./components/Footer";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -20,6 +21,7 @@ function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
+  const [activeAdminTab, setActiveAdminTab] = useState('overview');
 
   const homeRef = useRef(null);
   const aboutRef = useRef(null);
@@ -62,7 +64,7 @@ function App() {
     }
   };
 
-useEffect(() => {
+  useEffect(() => {
     const handleStorageChange = () => {
       const storedCart = JSON.parse(localStorage.getItem('cart') || '[]');
       setCartItems(storedCart);
@@ -117,6 +119,10 @@ useEffect(() => {
     setIsAdmin(adminStatus);
   };
 
+  const handleAdminTabChange = (tab) => {
+    setActiveAdminTab(tab);
+  };
+
   return (
     <Router>
       <div className="App">
@@ -132,21 +138,46 @@ useEffect(() => {
           menuRef={menuRef}
           contactRef={contactRef}
           isAdmin={isAdmin}
+          setActiveTab={handleAdminTabChange}
         />
         <Routes>
           <Route path="/" element={
+            session && isAdmin ? <Navigate to="/admin" replace /> : (
+              <>
+                <div ref={homeRef}><Home /></div>
+                <div ref={aboutRef}><About /></div>
+                <div ref={menuRef}><Menu limit={6} addToCart={addToCart} /></div>
+                <div ref={contactRef}><Contact /></div>
+                <Footer 
+                  scrollToSection={scrollToSection}
+                  homeRef={homeRef}
+                  aboutRef={aboutRef}
+                  menuRef={menuRef}
+                  contactRef={contactRef}
+                />
+              </>
+            )
+          } />
+          <Route path="/full-menu" element={
             <>
-              <div ref={homeRef}><Home /></div>
-              <div ref={aboutRef}><About /></div>
-              <div ref={menuRef}><Menu limit={6} addToCart={addToCart} /></div>
-              <div ref={contactRef}><Contact /></div>
+              <FullMenu addToCart={addToCart} />
+              <Footer 
+                scrollToSection={scrollToSection}
+                homeRef={homeRef}
+                aboutRef={aboutRef}
+                menuRef={menuRef}
+                contactRef={contactRef}
+              />
             </>
           } />
-          <Route path="/full-menu" element={<FullMenu addToCart={addToCart} />} />
           <Route 
             path="/admin" 
             element={
-              isAdmin ? <AdminDashboard /> : <Navigate to="/" replace />
+              isAdmin ? (
+                <div className="pt-0">
+                  <AdminDashboard activeTab={activeAdminTab} />
+                </div>
+              ) : <Navigate to="/" replace />
             } 
           />
         </Routes>
@@ -176,9 +207,6 @@ useEffect(() => {
             setIsLoginOpen(true);
           }}
         />
-        <footer className="bg-background text-foreground text-center py-4">
-          © 2024 Angkringan. All rights reserved.
-        </footer>
       </div>
     </Router>
   );

@@ -57,7 +57,7 @@ const PaymentManagement = () => {
     }
   };
 
-  const handleUpdatePaymentStatus = async (orderId, newStatus) => {
+  const handleUpdatePaymentStatus = async (orderId, newStatus, userId) => {
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -67,13 +67,16 @@ const PaymentManagement = () => {
       if (error) throw error;
       setOrders(orders.map(order => order.id === orderId ? { ...order, payment_status: newStatus } : order));
       toast.success(`Payment status updated to ${newStatus}`);
+      
+      // Send notification
+      await sendNotification(userId, `Payment status for order #${orderId} updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating payment status:', error);
       toast.error('Failed to update payment status');
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+  const handleUpdateOrderStatus = async (orderId, newStatus, userId) => {
     try {
       const { data, error } = await supabase
         .from('orders')
@@ -83,9 +86,23 @@ const PaymentManagement = () => {
       if (error) throw error;
       setOrders(orders.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
       toast.success(`Order status updated to ${newStatus}`);
+      
+      // Send notification
+      await sendNotification(userId, `Order status for order #${orderId} updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('Failed to update order status');
+    }
+  };
+
+  const sendNotification = async (userId, message) => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert({ user_id: userId, message, read: false });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error sending notification:', error);
     }
   };
 
@@ -153,17 +170,17 @@ const PaymentManagement = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4">Payment Management</h2>
+      <h2 className="text-2xl font-bold mb-4">Pembayaran</h2>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-100">
-              <th className="p-2 text-left">Order ID</th>
-              <th className="p-2 text-left">Date</th>
+              <th className="p-2 text-left">ID Pesanan</th>
+              <th className="p-2 text-left">Tanggal</th>
               <th className="p-2 text-left">Total</th>
-              <th className="p-2 text-left">Order Status</th>
-              <th className="p-2 text-left">Payment Status</th>
-              <th className="p-2 text-left">Actions</th>
+              <th className="p-2 text-left">Status Order</th>
+              <th className="p-2 text-left">Status Pembayaran</th>
+              <th className="p-2 text-left">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -175,7 +192,7 @@ const PaymentManagement = () => {
                 <td className="p-2">
                   <select
                     value={order.status}
-                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                    onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value, order.user_id)}
                     className="border rounded p-1"
                   >
                     <option value="pending">Pending</option>
@@ -187,7 +204,7 @@ const PaymentManagement = () => {
                 <td className="p-2">
                   <select
                     value={order.payment_status}
-                    onChange={(e) => handleUpdatePaymentStatus(order.id, e.target.value)}
+                    onChange={(e) => handleUpdatePaymentStatus(order.id, e.target.value, order.user_id)}
                     className="border rounded p-1"
                   >
                     <option value="pending">Pending</option>

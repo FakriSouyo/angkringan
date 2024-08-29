@@ -1,9 +1,46 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Element } from "react-scroll";
 import { motion } from "framer-motion";
 import { FiSend } from "react-icons/fi";
+import emailjs from 'emailjs-com';
+import toast from 'react-hot-toast';
 
 export default function Contact() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+
+  useEffect(() => {
+    emailjs.init("ybyKscxug5e_5xd_u"); // Ganti dengan Public Key EmailJS Anda
+  }, []);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await emailjs.send(
+        'service_3zglkin', // Service ID yang Anda berikan
+        'template_f50f18j', // Ganti dengan Template ID EmailJS Anda yang baru
+        {
+          from_name: formData.name,
+          from_email: formData.email,
+          message: formData.message,
+          to_email: 'isfan.diar123@gmail.com' // Email admin
+        }
+      );
+      toast.success('Pesan berhasil dikirim!');
+      setFormData({ name: '', email: '', message: '' });
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Gagal mengirim pesan. Silakan coba lagi.');
+    }
+  };
+
   return (
     <Element name="contact" id="contact" className="py-16 md:py-24 min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-secondary">
       <div className="container mx-auto px-4 sm:px-6 lg:px-10 max-w-4xl">
@@ -21,19 +58,19 @@ export default function Contact() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="bg-card rounded-xl shadow-lg p-6 sm:p-8"
         >
-          <p className="text-foreground mb-4 sm:mb-6 text-center text-base sm:text-lg">Punya pertanyaan atau ingin memesan? Hubungi kami!</p>
-          <form className="grid gap-4 sm:gap-6">
+          <p className="text-foreground mb-4 sm:mb-6 text-center text-base sm:text-lg">Punya saran atau kritik terhadap kami? Silahkan hubungi kami!</p>
+          <form onSubmit={handleSubmit} className="grid gap-4 sm:gap-6">
             <div className="grid gap-2">
               <label htmlFor="name" className="text-foreground font-medium text-sm sm:text-base">Nama</label>
-              <input id="name" type="text" placeholder="Masukkan nama Anda" className="w-full p-2 sm:p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200 text-sm sm:text-base" />
+              <input id="name" type="text" value={formData.name} onChange={handleChange} placeholder="Masukkan nama Anda" className="w-full p-2 sm:p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200 text-sm sm:text-base" required />
             </div>
             <div className="grid gap-2">
               <label htmlFor="email" className="text-foreground font-medium text-sm sm:text-base">Email</label>
-              <input id="email" type="email" placeholder="Masukkan email Anda" className="w-full p-2 sm:p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200 text-sm sm:text-base" />
+              <input id="email" type="email" value={formData.email} onChange={handleChange} placeholder="Masukkan email Anda" className="w-full p-2 sm:p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200 text-sm sm:text-base" required />
             </div>
             <div className="grid gap-2">
               <label htmlFor="message" className="text-foreground font-medium text-sm sm:text-base">Pesan</label>
-              <textarea id="message" placeholder="Masukkan pesan Anda" className="w-full p-2 sm:p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200 min-h-[100px] sm:min-h-[120px] text-sm sm:text-base" />
+              <textarea id="message" value={formData.message} onChange={handleChange} placeholder="Masukkan pesan Anda" className="w-full p-2 sm:p-3 border border-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200 min-h-[100px] sm:min-h-[120px] text-sm sm:text-base" required />
             </div>
             <button
               type="submit"

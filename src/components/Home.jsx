@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-scroll";
 import { motion } from "framer-motion";
-import HeroBg from '../assets/angkringan.jpg'
+import HeroBg from '../assets/home.jpg'
 
 export default function Home() {
   return (

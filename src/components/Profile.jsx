@@ -139,7 +139,7 @@ const Profile = ({ isOpen, onClose, session }) => {
                 {loading ? 'Updating...' : (
                   <>
                     <FiSave className="mr-2" />
-                    Save Changes
+                    Simpan
                   </>
                 )}
               </button>
