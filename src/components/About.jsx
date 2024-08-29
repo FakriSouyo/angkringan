@@ -1,6 +1,9 @@
 import React from "react";
 import { Link } from "react-scroll";
 import { motion } from "framer-motion";
+import HeroBg from '../assets/about.jpg'
+
+
 
 export default function About() {
   return (
@@ -19,7 +22,7 @@ export default function About() {
             className="order-2 md:order-1"
           >
             <img
-              src="/placeholder.svg"
+              src={HeroBg}
               width="500"
               height="500"
               alt="Tim Angkringan"
@@ -39,12 +42,12 @@ export default function About() {
               menciptakan hidangan lezat kami.
             </p>
             <Link
-              to="menu"
+              to="contact"
               smooth={true}
               duration={500}
               className="inline-flex items-center justify-center rounded-full bg-primary px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-medium text-primary-foreground shadow-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer transition-all duration-300 ease-in-out"
             >
-              Jelajahi Menu Kami
+              Hubungi Kami
             </Link>
           </div>
         </motion.div>

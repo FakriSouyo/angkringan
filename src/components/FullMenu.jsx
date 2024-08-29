@@ -98,7 +98,7 @@ const FullMenu = ({ addToCart }) => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-primary mb-6 text-center">Our Full Menu</h1>
+      <h1 className="text-3xl font-bold text-primary mb-6 text-center">Semua Menu Kami</h1>
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-center">
         <div className="relative w-full sm:w-64 mb-4 sm:mb-0">
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -115,7 +115,7 @@ const FullMenu = ({ addToCart }) => {
           onChange={(e) => setSelectedCategory(e.target.value)}
           className="w-full sm:w-auto border rounded-md px-4 py-2"
         >
-          <option value="All">All Categories</option>
+          <option value="All">Kategori</option>
           {categories.map(category => (
             <option key={category} value={category}>{category}</option>
           ))}

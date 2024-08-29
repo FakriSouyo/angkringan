@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiMenu, FiX, FiShoppingCart, FiUser, FiLogOut, FiFileText, FiSettings } from "react-icons/fi";
+import { FiMenu, FiX, FiShoppingCart, FiUser, FiLogOut, FiFileText, FiHome, FiList, FiDollarSign, FiClock, FiBell } from "react-icons/fi";
 import { supabase } from '../services/supabase';
 import Profile from './Profile';
 import TransactionHistory from './TransactionHistory';
 
-export default function Navbar({ session, setIsCartOpen, openLoginModal, cartItemCount, scrollToSection, homeRef, aboutRef, menuRef, contactRef, hasCartItems, isAdmin }) {
+export default function Navbar({ session, setIsCartOpen, openLoginModal, cartItemCount, scrollToSection, homeRef, aboutRef, menuRef, contactRef, hasCartItems, isAdmin, setActiveTab }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isTransactionHistoryOpen, setIsTransactionHistoryOpen] = useState(false);
   const [userName, setUserName] = useState('');
+  const [notifications, setNotifications] = useState([]);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,8 +32,23 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
   useEffect(() => {
     if (session) {
       fetchUserName();
+      fetchNotifications();
+      const channel = supabase
+        .channel('notifications')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, handleNewNotification)
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [session]);
+
+  useEffect(() => {
+    if (session && isAdmin) {
+      navigate('/admin');
+    }
+  }, [session, isAdmin, navigate]);
 
   const fetchUserName = async () => {
     try {
@@ -43,10 +59,33 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
         .single();
 
       if (error) throw error;
-      setUserName(data.name || 'User');
+      setUserName(data.name || 'Pengguna');
     } catch (error) {
       console.error('Error fetching user name:', error);
-      setUserName('User');
+      setUserName('Pengguna');
+    }
+  };
+
+  const fetchNotifications = async () => {
+    if (session) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('read', false)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+      } else {
+        setNotifications(data);
+      }
+    }
+  };
+
+  const handleNewNotification = (payload) => {
+    if (payload.new.user_id === session.user.id) {
+      setNotifications(prev => [payload.new, ...prev]);
     }
   };
 
@@ -67,11 +106,40 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
     setIsMenuOpen(false);
   };
 
+  const handleTransactionHistoryClick = () => {
+    setIsTransactionHistoryOpen(true);
+    clearNotifications();
+  };
+
+  const clearNotifications = async () => {
+    if (session) {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', session.user.id);
+
+      if (error) {
+        console.error('Error clearing notifications:', error);
+      } else {
+        setNotifications([]);
+      }
+    }
+  };
+
   const renderAdminNav = () => (
     <nav className="hidden md:flex items-center gap-6">
-      <Link to="/admin" className="text-primary hover:text-accent transition-colors duration-200">
-        Dashboard
-      </Link>
+      <button onClick={() => setActiveTab('overview')} className="text-primary hover:text-accent transition-colors duration-200">
+        <FiHome className="inline-block mr-2" />Ringkasan
+      </button>
+      <button onClick={() => setActiveTab('menu')} className="text-primary hover:text-accent transition-colors duration-200">
+        <FiList className="inline-block mr-2" />Manajemen Menu
+      </button>
+      <button onClick={() => setActiveTab('payments')} className="text-primary hover:text-accent transition-colors duration-200">
+        <FiDollarSign className="inline-block mr-2" />Pembayaran
+      </button>
+      <button onClick={() => setActiveTab('transactions')} className="text-primary hover:text-accent transition-colors duration-200">
+        <FiClock className="inline-block mr-2" />Riwayat Transaksi
+      </button>
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -87,17 +155,16 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
               onClick={() => {
                 setIsDropdownOpen(false);
                 setIsProfileOpen(true);
-              }}
-            >
+              }}>
               <FiUser className="mr-2" />
-              Profile
+              Profil
             </button>
             <button
               onClick={handleLogout}
               className="flex items-center w-full text-left px-4 py-2 text-sm text-primary hover:bg-accent/10"
             >
               <FiLogOut className="mr-2" />
-              Logout
+              Keluar
             </button>
           </div>
         )}
@@ -107,13 +174,18 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
 
   const renderUserNav = () => (
     <nav className="hidden md:flex items-center gap-6">
-      {['Home', 'About', 'Menu', 'Contact'].map((item) => (
+      {[
+        { key: 'Home', label: 'Beranda' },
+        { key: 'About', label: 'Tentang' },
+        { key: 'Menu', label: 'Menu' },
+        { key: 'Contact', label: 'Kontak' }
+      ].map((item) => (
         <button
-          key={item}
-          onClick={() => item === "Menu" ? navigate('/full-menu') : handleNavigation('/', eval(`${item.toLowerCase()}Ref`))}
+          key={item.key}
+          onClick={() => item.key === "Menu" ? navigate('/full-menu') : handleNavigation('/', eval(`${item.key.toLowerCase()}Ref`))}
           className="text-primary hover:text-accent transition-colors duration-200"
         >
-          {item}
+          {item.label}
         </button>
       ))}
       {session ? (
@@ -124,6 +196,11 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
           >
             <FiUser className="mr-2" />
             <span>{userName}</span>
+            {notifications.length > 0 && (
+              <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                {notifications.length}
+              </span>
+            )}
           </button>
           {isDropdownOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-background rounded-md shadow-lg py-1">
@@ -135,24 +212,29 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
                 }}
               >
                 <FiUser className="mr-2" />
-                Profile
+                Profil
               </button>
               <button
-                  className="flex items-center w-full text-left px-4 py-2 text-sm text-primary hover:bg-accent/10 "
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setIsTransactionHistoryOpen(true);
-                  }}
-                >
-                  <FiFileText className="mr-2" />
-                  Transaction History
-                </button>
+                className="flex items-center w-full text-left px-4 py-2 text-sm text-primary hover:bg-accent/10"
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  handleTransactionHistoryClick();
+                }}
+              >
+                <FiFileText className="mr-2" />
+                Riwayat Transaksi
+                {notifications.length > 0 && (
+                  <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={handleLogout}
                 className="flex items-center w-full text-left px-4 py-2 text-sm text-primary hover:bg-accent/10"
               >
                 <FiLogOut className="mr-2" />
-                Logout
+                Keluar
               </button>
             </div>
           )}
@@ -192,7 +274,6 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
         </motion.button>
       </motion.header>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
@@ -203,13 +284,18 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
           >
             {isAdmin ? (
               <>
-                <Link
-                  to="/admin"
-                  className="text-primary hover:text-accent block py-2 transition-colors duration-200 w-full text-left"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Dashboard
-                </Link>
+                <button onClick={() => { setActiveTab('overview'); setIsMenuOpen(false); }} className="text-primary hover:text-accent block py-2 transition-colors duration-200 w-full text-left">
+                  <FiHome className="inline-block mr-2" />Ringkasan
+                </button>
+                <button onClick={() => { setActiveTab('menu'); setIsMenuOpen(false); }} className="text-primary hover:text-accent block py-2 transition-colors duration-200 w-full text-left">
+                  <FiList className="inline-block mr-2" />Manajemen Menu
+                </button>
+                <button onClick={() => { setActiveTab('payments'); setIsMenuOpen(false); }} className="text-primary hover:text-accent block py-2 transition-colors duration-200 w-full text-left">
+                  <FiDollarSign className="inline-block mr-2" />Manajemen Pembayaran
+                </button>
+                <button onClick={() => { setActiveTab('transactions'); setIsMenuOpen(false); }} className="text-primary hover:text-accent block py-2 transition-colors duration-200 w-full text-left">
+                  <FiClock className="inline-block mr-2" />Riwayat Transaksi
+                </button>
                 <button
                   className="flex items-center text-primary hover:text-accent py-2 transition-colors duration-200 w-full text-left"
                   onClick={() => {
@@ -218,7 +304,7 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
                   }}
                 >
                   <FiUser className="mr-2" />
-                  Profile 
+                  Profil 
                 </button>
                 <button
                   onClick={() => {
@@ -228,25 +314,30 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
                   className="flex items-center text-primary hover:text-accent py-2 transition-colors duration-200 w-full text-left"
                 >
                   <FiLogOut className="mr-2" />
-                  Logout
+                  Keluar
                 </button>
               </>
             ) : (
               <>
-                {['Home', 'About', 'Menu', 'Contact'].map((item) => (
+                {[
+                  { key: 'Home', label: 'Beranda' },
+                  { key: 'About', label: 'Tentang' },
+                  { key: 'Menu', label: 'Menu' },
+                  { key: 'Contact', label: 'Kontak' }
+                ].map((item) => (
                   <button
-                    key={item}
+                    key={item.key}
                     onClick={() => {
-                      if (item === "Menu") {
+                      if (item.key === "Menu") {
                         navigate('/full-menu');
                       } else {
-                        handleNavigation('/', eval(`${item.toLowerCase()}Ref`));
+                        handleNavigation('/', eval(`${item.key.toLowerCase()}Ref`));
                       }
                       setIsMenuOpen(false);
                     }}
                     className="text-primary hover:text-accent block py-2 transition-colors duration-200 w-full text-left"
                   >
-                    {item}
+                    {item.label}
                   </button>
                 ))}
                 {session ? (
@@ -259,17 +350,23 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
                       }}
                     >
                       <FiUser className="mr-2" />
-                      Profile 
+                      Profil 
                     </button>
                    <button
                   className="flex items-center text-primary hover:text-accent  py-2 transition-colors duration-200 w-full text-left"
                   onClick={() => {
                     setIsMenuOpen(false);
-                    setIsTransactionHistoryOpen(true);
+                    handleTransactionHistoryClick();
                   }}
                 >
                   <FiFileText className="mr-2" />
+                  Riwayat Transaksi
                   Transaction History
+                  {notifications.length > 0 && (
+                    <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                      {notifications.length}
+                    </span>
+                  )}
                 </button>
                     <button
                       onClick={() => {
@@ -323,7 +420,7 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
         onClose={() => setIsProfileOpen(false)} 
         session={session} 
       />
- <TransactionHistory
+      <TransactionHistory
         isOpen={isTransactionHistoryOpen}
         onClose={() => setIsTransactionHistoryOpen(false)}
         session={session}

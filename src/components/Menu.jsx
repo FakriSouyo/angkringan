@@ -140,7 +140,7 @@ export default function Menu({ session, limit = 6, addToCart }) {
             to="/full-menu"
             className="inline-flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/80 transition-colors duration-200"
           >
-            <span>View Full Menu</span>
+            <span>Lihat Semua Menu</span>
             <FiArrowRight />
           </Link>
         </div>

@@ -267,12 +267,12 @@ const MenuManagement = () => {
         handleAddItem(item);
       }
     }} className="bg-card p-6 rounded-lg shadow-md mb-6">
-      <h3 className="text-xl font-semibold mb-4">{editingItem ? 'Edit Item' : 'Add New Item'}</h3>
+      <h3 className="text-xl font-semibold mb-4">{editingItem ? 'Edit Item' : 'Tambah Item Baru'}</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input 
           type="text" 
           name="title" 
-          placeholder="Title" 
+          placeholder="Nama Menu" 
           required 
           value={formData.title} 
           onChange={(e) => setFormData({...formData, title: e.target.value})}
@@ -281,7 +281,7 @@ const MenuManagement = () => {
         <input 
           type="number" 
           name="price" 
-          placeholder="Price" 
+          placeholder="Harga" 
           required 
           value={formData.price} 
           onChange={(e) => setFormData({...formData, price: e.target.value})}
@@ -289,7 +289,7 @@ const MenuManagement = () => {
         />
         <textarea 
           name="description" 
-          placeholder="Description" 
+          placeholder="Deskripsi" 
           required 
           value={formData.description} 
           onChange={(e) => setFormData({...formData, description: e.target.value})}
@@ -302,7 +302,7 @@ const MenuManagement = () => {
           onChange={(e) => setFormData({...formData, category: e.target.value})}
           className="input"
         >
-          <option value="">Select Category</option>
+          <option value="">Pilih Kategori</option>
           <option value="Makanan">Makanan</option>
           <option value="Minuman">Minuman</option>
           <option value="Sate & Gorengan">Sate & Gorengan</option>
@@ -333,7 +333,7 @@ const MenuManagement = () => {
       </div>
       <div className="mt-4 flex justify-end">
         <button type="submit" className="bg-primary text-primary-foreground px-4 py-2 rounded-md">
-          {editingItem ? 'Update Item' : 'Add Item'}
+          {editingItem ? 'Update Item' : 'Tambah Item'}
         </button>
         {editingItem && (
           <button 
@@ -345,7 +345,7 @@ const MenuManagement = () => {
           </button>
         )}
       </div>
-      <select 
+      {/* <select 
         name="status" 
         required 
         value={formData.status} 
@@ -354,7 +354,7 @@ const MenuManagement = () => {
       >
         <option value="active">Active</option>
         <option value="draft">Draft</option>
-      </select>
+      </select> */}
     </form>
   );
 
@@ -364,7 +364,7 @@ const MenuManagement = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4">Menu Management</h2>
+      <h2 className="text-2xl font-bold mb-4">Manajemen Menu</h2>
       {renderForm()}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {menuItems.map(item => (

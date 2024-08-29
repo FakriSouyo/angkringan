@@ -134,7 +134,7 @@ const Payment = ({ isOpen, onClose, orderId, totalAmount }) => {
 
       if (error) throw error;
 
-      toast.success('Payment processed successfully');
+      toast.success('Proses pembayaran berhasil');
       onClose();
     } catch (error) {
       console.error('Payment error:', error);
