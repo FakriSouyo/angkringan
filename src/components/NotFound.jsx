@@ -1,9 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiHome } from 'react-icons/fi';
 
 const NotFound = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect to /404 if we're not already there
+    if (window.location.pathname !== '/404') {
+      navigate('/404', { replace: true });
+    }
+  }, [navigate]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-secondary flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">

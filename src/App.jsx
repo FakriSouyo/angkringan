@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 import { supabase } from "./services/supabase";
-import ErrorBoundary from './components/ErrorBoundary';
 import AdminNavbar from "./components/AdminNavbar";
 import UserNavbar from "./components/UserNavbar";
 import Home from "./components/Home";
@@ -16,8 +15,11 @@ import Signup from "./components/Signup";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import Footer from "./components/Footer";
 import NotFound from "./components/NotFound";
+import TransactionHistory from "./components/TransactionHistory";
+import Profile from "./components/Profile";
+import ErrorBoundary from './components/ErrorBoundary';
 
-function App() {
+const AppContent = () => {
   const [session, setSession] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -26,36 +28,18 @@ function App() {
   const [cartItems, setCartItems] = useState([]);
   const [activeAdminTab, setActiveAdminTab] = useState('overview');
   const [userName, setUserName] = useState('');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isTransactionHistoryOpen, setIsTransactionHistoryOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   const homeRef = useRef(null);
   const aboutRef = useRef(null);
   const menuRef = useRef(null);
   const contactRef = useRef(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        checkAdminStatus(session.user.id);
-        fetchUserName(session.user.id);
-      }
-    });
+  const location = useLocation();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        checkAdminStatus(session.user.id);
-        fetchUserName(session.user.id);
-      } else {
-        setIsAdmin(false);
-        setUserName('');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const checkAdminStatus = async (userId) => {
+  const checkAdminStatus = useCallback(async (userId) => {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -69,9 +53,9 @@ function App() {
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
     }
-  };
+  }, []);
 
-  const fetchUserName = async (userId) => {
+  const fetchUserName = useCallback(async (userId) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -85,14 +69,40 @@ function App() {
       console.error('Error fetching user name:', error);
       setUserName('User');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const setupSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      if (session) {
+        checkAdminStatus(session.user.id);
+        fetchUserName(session.user.id);
+      }
+    };
+
+    setupSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        checkAdminStatus(session.user.id);
+        fetchUserName(session.user.id);
+      } else {
+        setIsAdmin(false);
+        setUserName('');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkAdminStatus, fetchUserName]);
 
   useEffect(() => {
     const storedCart = JSON.parse(localStorage.getItem('cart') || '[]');
     setCartItems(storedCart);
   }, []);
 
-  const addToCart = (item) => {
+  const addToCart = useCallback((item) => {
     setCartItems(prevItems => {
       const existingItemIndex = prevItems.findIndex(i => i.menu_item_id === item.menu_item_id);
       let updatedItems;
@@ -105,127 +115,62 @@ function App() {
       localStorage.setItem('cart', JSON.stringify(updatedItems));
       return updatedItems;
     });
-  };
+  }, []);
 
-  const removeFromCart = (id) => {
+  const removeFromCart = useCallback((id) => {
     setCartItems(prevItems => {
       const updatedCart = prevItems.filter(item => item.menu_item_id !== id);
       localStorage.setItem('cart', JSON.stringify(updatedCart));
       return updatedCart;
     });
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
     localStorage.removeItem('cart');
-  };
+  }, []);
 
-  const scrollToSection = (ref) => {
-    ref.current.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollToSection = useCallback((ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
-  const handleLoginSuccess = (adminStatus) => {
+  const handleLoginSuccess = useCallback((adminStatus) => {
     setIsAdmin(adminStatus);
-  };
+  }, []);
 
-  return (
-    <ErrorBoundary>
-      <Router>
-        <AppContent
-          session={session}
-          isAdmin={isAdmin}
-          userName={userName}
-          isCartOpen={isCartOpen}
-          setIsCartOpen={setIsCartOpen}
-          isLoginOpen={isLoginOpen}
-          setIsLoginOpen={setIsLoginOpen}
-          isSignupOpen={isSignupOpen}
-          setIsSignupOpen={setIsSignupOpen}
-          cartItems={cartItems}
-          activeAdminTab={activeAdminTab}
-          setActiveAdminTab={setActiveAdminTab}
-          homeRef={homeRef}
-          aboutRef={aboutRef}
-          menuRef={menuRef}
-          contactRef={contactRef}
-          scrollToSection={scrollToSection}
-          addToCart={addToCart}
-          removeFromCart={removeFromCart}
-          clearCart={clearCart}
-          handleLoginSuccess={handleLoginSuccess}
-        />
-      </Router>
-    </ErrorBoundary>
-  );
-}
+  const handleTransactionHistoryClick = useCallback(() => {
+    setIsTransactionHistoryOpen(true);
+  }, []);
 
-function AppContent({
-  session,
-  isAdmin,
-  userName,
-  isCartOpen,
-  setIsCartOpen,
-  isLoginOpen,
-  setIsLoginOpen,
-  isSignupOpen,
-  setIsSignupOpen,
-  cartItems,
-  activeAdminTab,
-  setActiveAdminTab,
-  homeRef,
-  aboutRef,
-  menuRef,
-  contactRef,
-  scrollToSection,
-  addToCart,
-  removeFromCart,
-  clearCart,
-  handleLoginSuccess
-}) {
-  const location = useLocation();
-  const isNotFoundPage = location.pathname === "*";
-
-  useEffect(() => {
-    if (location.state && location.state.scrollTo) {
-      const section = location.state.scrollTo;
-      if (section === 'home') scrollToSection(homeRef);
-      if (section === 'about') scrollToSection(aboutRef);
-      if (section === 'contact') scrollToSection(contactRef);
-      // Clear the state after scrolling
-      window.history.replaceState({}, document.title);
-    }
-  }, [location]);
-
-  const renderNavbar = () => {
-    if (location.pathname === "*") return null;
-    return isAdmin ? (
-      <AdminNavbar 
-        userName={userName}
-        setActiveTab={setActiveAdminTab}
-      />
-    ) : (
-      <UserNavbar
-        session={session}
-        userName={userName}
-        cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-        openLoginModal={() => setIsLoginOpen(true)}
-        setIsCartOpen={setIsCartOpen}
-        scrollToSection={scrollToSection}
-        homeRef={homeRef}
-        aboutRef={aboutRef}
-        menuRef={menuRef}
-        contactRef={contactRef}
-        notifications={[]}
-        setIsProfileOpen={() => {}}
-        handleTransactionHistoryClick={() => {}}
-      />
-    );
-  };
+  const isNotFoundPage = location.pathname === "/404" || location.pathname === "*";
 
   return (
     <div className="App">
       <Toaster position="top-center" reverseOrder={false} />
-      {renderNavbar()}
+      {!isNotFoundPage && (
+        isAdmin ? (
+          <AdminNavbar 
+            userName={userName}
+            setActiveTab={setActiveAdminTab}
+          />
+        ) : (
+          <UserNavbar
+            session={session}
+            userName={userName}
+            cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+            openLoginModal={() => setIsLoginOpen(true)}
+            setIsCartOpen={setIsCartOpen}
+            scrollToSection={scrollToSection}
+            homeRef={homeRef}
+            aboutRef={aboutRef}
+            menuRef={menuRef}
+            contactRef={contactRef}
+            notifications={notifications}
+            setIsProfileOpen={setIsProfileOpen}
+            handleTransactionHistoryClick={handleTransactionHistoryClick}
+          />
+        )
+      )}
       <Routes>
         <Route path="/" element={
           <ErrorBoundary>
@@ -298,9 +243,27 @@ function AppContent({
               setIsLoginOpen(true);
             }}
           />
+          <Profile
+            isOpen={isProfileOpen}
+            onClose={() => setIsProfileOpen(false)}
+            session={session}
+          />
+          <TransactionHistory
+            isOpen={isTransactionHistoryOpen}
+            onClose={() => setIsTransactionHistoryOpen(false)}
+            session={session}
+          />
         </>
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 

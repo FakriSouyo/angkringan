@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiUser, FiLock } from 'react-icons/fi';
+import { FiX, FiUser, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
@@ -8,6 +8,7 @@ const Login = ({ isOpen, onClose, onSwitchToSignup, onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -87,14 +88,21 @@ const Login = ({ isOpen, onClose, onSwitchToSignup, onLoginSuccess }) => {
                 <div className="relative">
                   <FiLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full pl-10 pr-10 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Masukkan Password"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary"
+                  >
+                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
                 </div>
               </div>
               <button

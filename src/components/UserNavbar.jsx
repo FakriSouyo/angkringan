@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
-import { FiUser, FiLogOut, FiFileText, FiShoppingCart } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiUser, FiLogOut, FiFileText, FiShoppingCart, FiMenu, FiX } from "react-icons/fi";
 import { supabase } from '../services/supabase';
 
 const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCartOpen, scrollToSection, homeRef, aboutRef, menuRef, contactRef, notifications, setIsProfileOpen, handleTransactionHistoryClick }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,7 +21,37 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
     } else {
       scrollToSection(ref);
     }
+    setIsMobileMenuOpen(false);
   }, [scrollToSection, navigate, location.pathname]);
+
+  const NavItems = ({ isMobile }) => (
+    <>
+      <button 
+        onClick={() => handleNavigation(homeRef, 'home')} 
+        className={`text-primary hover:text-accent transition-colors duration-200 ${isMobile ? 'w-full text-left px-4 py-2 hover:bg-black hover:text-white' : ''}`}
+      >
+        Beranda
+      </button>
+      <button 
+        onClick={() => handleNavigation(aboutRef, 'about')} 
+        className={`text-primary hover:text-accent transition-colors duration-200 ${isMobile ? 'w-full text-left px-4 py-2 hover:bg-black hover:text-white' : ''}`}
+      >
+        Tentang
+      </button>
+      <button 
+        onClick={() => navigate('/fullmenu')} 
+        className={`text-primary hover:text-accent transition-colors duration-200 ${isMobile ? 'w-full text-left px-4 py-2 hover:bg-black hover:text-white' : ''}`}
+      >
+        Menu
+      </button>
+      <button 
+        onClick={() => handleNavigation(contactRef, 'contact')} 
+        className={`text-primary hover:text-accent transition-colors duration-200 ${isMobile ? 'w-full text-left px-4 py-2 hover:bg-black hover:text-white' : ''}`}
+      >
+        Kontak
+      </button>
+    </>
+  );
 
   return (
     <>
@@ -29,25 +60,24 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
           <img src="/src/assets/logo.svg" alt="Logo" className="w-8 h-8" />
           <span className="text-2xl font-bold text-primary">Mas Pithik</span>
         </Link>
-        <div className="flex items-center gap-6">
-          <button onClick={() => handleNavigation(homeRef, 'home')} className="text-primary hover:text-accent transition-colors duration-200">Beranda</button>
-          <button onClick={() => handleNavigation(aboutRef, 'about')} className="text-primary hover:text-accent transition-colors duration-200">Tentang</button>
-          <button onClick={() => navigate('/fullmenu')} className="text-primary hover:text-accent transition-colors duration-200">Menu</button>
-          <button onClick={() => handleNavigation(contactRef, 'contact')} className="text-primary hover:text-accent transition-colors duration-200">Kontak</button>
+        <div className="hidden md:flex items-center gap-6">
+          <NavItems />
           {session ? (
             <div className="relative">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center space-x-2 text-white bg-black hover:bg-gray-800 transition-colors duration-200 px-3 py-2 rounded-full"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors duration-200"
               >
                 <FiUser className="mr-2" />
                 <span>{userName}</span>
                 {notifications.length > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                  <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                     {notifications.length}
                   </span>
                 )}
-              </button>
+              </motion.button>
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-background rounded-md shadow-lg py-1">
                   <button
@@ -96,7 +126,67 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
             </motion.button>
           )}
         </div>
+        <button
+          className="md:hidden text-primary"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+        </button>
       </nav>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-x-0 top-16 bg-background z-40 md:hidden"
+          >
+            <div className="flex flex-col items-start py-4">
+              <NavItems isMobile={true} />
+              {session ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsProfileOpen(true);
+                    }}
+                    className="w-full text-left px-4 py-2 text-primary hover:text-white hover:bg-black transition-colors duration-200"
+                  >
+                    Profil
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleTransactionHistoryClick();
+                    }}
+                    className="w-full text-left px-4 py-2 text-primary hover:text-white hover:bg-black transition-colors duration-200"
+                  >
+                    Riwayat Transaksi
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-primary hover:text-white hover:bg-black transition-colors duration-200"
+                  >
+                    Keluar
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    openLoginModal();
+                  }}
+                  className="w-full text-left px-4 py-2 inline-flex items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors duration-200"
+                >
+                  Masuk
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}

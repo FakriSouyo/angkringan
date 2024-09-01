@@ -44,7 +44,7 @@ const Profile = ({ isOpen, onClose, session }) => {
       const { data, error } = await supabase
         .from('profiles')
         .upsert({ id: session.user.id, name, phone_number: phoneNumber });
-  
+
       if (error) {
         console.error('Supabase error:', error);
         throw error;
