@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabase';
-import { FiEye, FiCheck, FiX, FiFileText } from 'react-icons/fi';
+import { FiEye, FiCheck, FiX, FiFileText, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const PaymentManagement = () => {
@@ -8,10 +8,13 @@ const PaymentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProofOfPayment, setShowProofOfPayment] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const ordersPerPage = 5;
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [currentPage]);
 
   const getImageUrl = (imageUrl) => {
     if (imageUrl && imageUrl.startsWith('http')) {
@@ -25,6 +28,12 @@ const PaymentManagement = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact' });
+
+      setTotalPages(Math.ceil(count / ordersPerPage));
+
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -38,7 +47,8 @@ const PaymentManagement = () => {
           ),
           proof_of_payment_url
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * ordersPerPage, currentPage * ordersPerPage - 1);
 
       if (error) throw error;
 
@@ -51,7 +61,7 @@ const PaymentManagement = () => {
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Failed to load orders');
+      toast.error('Gagal memuat pesanan');
     } finally {
       setLoading(false);
     }
@@ -66,13 +76,13 @@ const PaymentManagement = () => {
         .single();
       if (error) throw error;
       setOrders(orders.map(order => order.id === orderId ? { ...order, payment_status: newStatus } : order));
-      toast.success(`Payment status updated to ${newStatus}`);
+      toast.success(`Status pembayaran diperbarui menjadi ${newStatus}`);
       
       // Send notification
-      await sendNotification(userId, `Payment status for order #${orderId} updated to ${newStatus}`);
+      await sendNotification(userId, `Status pembayaran untuk pesanan #${orderId} diperbarui menjadi ${newStatus}`);
     } catch (error) {
       console.error('Error updating payment status:', error);
-      toast.error('Failed to update payment status');
+      toast.error('Gagal memperbarui status pembayaran');
     }
   };
 
@@ -85,13 +95,13 @@ const PaymentManagement = () => {
         .single();
       if (error) throw error;
       setOrders(orders.map(order => order.id === orderId ? { ...order, status: newStatus } : order));
-      toast.success(`Order status updated to ${newStatus}`);
+      toast.success(`Status pesanan diperbarui menjadi ${newStatus}`);
       
       // Send notification
-      await sendNotification(userId, `Order status for order #${orderId} updated to ${newStatus}`);
+      await sendNotification(userId, `Status pesanan untuk pesanan #${orderId} diperbarui menjadi ${newStatus}`);
     } catch (error) {
       console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
+      toast.error('Gagal memperbarui status pesanan');
     }
   };
 
@@ -109,13 +119,13 @@ const PaymentManagement = () => {
   const renderOrderDetails = (order) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-card p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h3 className="text-2xl font-bold mb-4">Order Details</h3>
-        <p><strong>Order ID:</strong> {order.id}</p>
-        <p><strong>Date:</strong> {new Date(order.created_at).toLocaleString()}</p>
+        <h3 className="text-2xl font-bold mb-4">Detail Pesanan</h3>
+        <p><strong>ID Pesanan:</strong> {order.id}</p>
+        <p><strong>Tanggal:</strong> {new Date(order.created_at).toLocaleString()}</p>
         <p><strong>Status:</strong> {order.status}</p>
-        <p><strong>Payment Status:</strong> {order.payment_status}</p>
-        <p><strong>Payment Method:</strong> {order.payment_method}</p>
-        <h4 className="font-bold mt-4 mb-2">Items:</h4>
+        <p><strong>Status Pembayaran:</strong> {order.payment_status}</p>
+        <p><strong>Metode Pembayaran:</strong> {order.payment_method}</p>
+        <h4 className="font-bold mt-4 mb-2">Item:</h4>
         {order.order_items && order.order_items.length > 0 ? (
           <ul className="list-disc list-inside">
             {order.order_items.map((item, index) => (
@@ -125,12 +135,12 @@ const PaymentManagement = () => {
             ))}
           </ul>
         ) : (
-          <p>No items in this order.</p>
+          <p>Tidak ada item dalam pesanan ini.</p>
         )}
         <p className="font-bold mt-4">Total: Rp {order.total_amount.toLocaleString()}</p>
         
         <div className="mt-6 flex justify-end">
-          <button onClick={() => setSelectedOrder(null)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Close</button>
+          <button onClick={() => setSelectedOrder(null)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Tutup</button>
         </div>
       </div>
     </div>
@@ -139,33 +149,33 @@ const PaymentManagement = () => {
   const renderProofOfPayment = (order) => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-card p-6 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <h3 className="text-2xl font-bold mb-4">Proof of Payment</h3>
-        <p><strong>Order ID:</strong> {order.id}</p>
-        <p><strong>Payment Method:</strong> {order.payment_method}</p>
+        <h3 className="text-2xl font-bold mb-4">Bukti Pembayaran</h3>
+        <p><strong>ID Pesanan:</strong> {order.id}</p>
+        <p><strong>Metode Pembayaran:</strong> {order.payment_method}</p>
         
         {order.payment_method !== 'Bayar di Tempat' && order.proof_of_payment_url ? (
           <div className="mt-4">
             <img 
               src={order.proof_of_payment_url} 
-              alt="Proof of Payment" 
+              alt="Bukti Pembayaran" 
               className="max-w-full h-auto" 
             />
           </div>
         ) : order.payment_method === 'Bayar di Tempat' ? (
-          <p className="mt-4"><em>Pay at location - No proof of payment required</em></p>
+          <p className="mt-4"><em>Bayar di tempat - Tidak perlu bukti pembayaran</em></p>
         ) : (
-          <p className="mt-4"><em>No proof of payment uploaded yet</em></p>
+          <p className="mt-4"><em>Belum ada bukti pembayaran yang diunggah</em></p>
         )}
         
         <div className="mt-6 flex justify-end">
-          <button onClick={() => setShowProofOfPayment(false)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Close</button>
+          <button onClick={() => setShowProofOfPayment(false)} className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md">Tutup</button>
         </div>
       </div>
     </div>
   );
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div>Memuat...</div>;
   }
 
   return (
@@ -196,9 +206,9 @@ const PaymentManagement = () => {
                     className="border rounded p-1"
                   >
                     <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="processing">Diproses</option>
+                    <option value="completed">Selesai</option>
+                    <option value="cancelled">Dibatalkan</option>
                   </select>
                 </td>
                 <td className="p-2">
@@ -208,15 +218,15 @@ const PaymentManagement = () => {
                     className="border rounded p-1"
                   >
                     <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="failed">Failed</option>
+                    <option value="paid">Dibayar</option>
+                    <option value="failed">Gagal</option>
                   </select>
                 </td>
                 <td className="p-2 flex">
                   <button
                     onClick={() => setSelectedOrder(order)}
                     className="text-blue-500 hover:text-blue-700 mr-2"
-                    title="View Order Details"
+                    title="Lihat Detail Pesanan"
                   >
                     <FiEye />
                   </button>
@@ -226,7 +236,7 @@ const PaymentManagement = () => {
                       setShowProofOfPayment(true);
                     }}
                     className="text-green-500 hover:text-green-700 mr-2"
-                    title="View Proof of Payment"
+                    title="Lihat Bukti Pembayaran"
                   >
                     <FiFileText />
                   </button>
@@ -235,6 +245,23 @@ const PaymentManagement = () => {
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="mt-4 flex justify-center items-center">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="mr-2 px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50"
+        >
+          <FiChevronLeft />
+        </button>
+        <span>Halaman {currentPage} dari {totalPages}</span>
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="ml-2 px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50"
+        >
+          <FiChevronRight />
+        </button>
       </div>
       {selectedOrder && !showProofOfPayment && renderOrderDetails(selectedOrder)}
       {selectedOrder && showProofOfPayment && renderProofOfPayment(selectedOrder)}
