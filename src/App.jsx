@@ -142,7 +142,7 @@ function App() {
         />
         <Routes>
           <Route path="/" element={
-            session && isAdmin ? <Navigate to="/admin" replace /> : (
+            session && isAdmin ? <Navigate to="/admin/dashboard" replace /> : (
               <>
                 <div ref={homeRef}><Home /></div>
                 <div ref={aboutRef}><About /></div>
@@ -158,7 +158,7 @@ function App() {
               </>
             )
           } />
-          <Route path="/full-menu" element={
+          <Route path="/fullmenu" element={
             <>
               <FullMenu addToCart={addToCart} />
               <Footer 
@@ -171,7 +171,7 @@ function App() {
             </>
           } />
           <Route 
-            path="/admin" 
+            path="/admin/dashboard" 
             element={
               isAdmin ? (
                 <div className="pt-0">

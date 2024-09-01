@@ -39,7 +39,7 @@ const Footer = ({ scrollToSection, homeRef, aboutRef, menuRef, contactRef }) => 
                 <button onClick={() => handleNavigation('/', aboutRef)} className="hover:text-gray-300">Tentang</button>
               </li>
               <li className="mb-2">
-                <button onClick={() => navigate('/full-menu')} className="hover:text-gray-300">Menu</button>
+                <button onClick={() => navigate('/fullmenu')} className="hover:text-gray-300">Menu</button>
               </li>
               <li className="mb-2">
                 <button onClick={() => handleNavigation('/', contactRef)} className="hover:text-gray-300">Kontak</button>

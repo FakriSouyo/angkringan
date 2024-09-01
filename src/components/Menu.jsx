@@ -140,7 +140,7 @@ export default function Menu({ session, limit = 6, addToCart }) {
         </div>
         <div className="mt-8 text-center">
           <Link 
-            to="/full-menu"
+            to="/fullmenu"
             className="inline-flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/80 transition-colors duration-200"
           >
             <span>Lihat Semua Menu</span>

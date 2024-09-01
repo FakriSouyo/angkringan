@@ -30,7 +30,7 @@ const Login = ({ isOpen, onClose, onSwitchToSignup, onLoginSuccess }) => {
       
       // Arahkan admin ke dashboard
       if (userData.is_admin) {
-        window.location.href = '/admin'; // Gunakan navigasi browser untuk full reload
+        window.location.href = '/admin/dashboard'; // Gunakan navigasi browser untuk full reload
       }
     } catch (error) {
       toast.error(error.message);

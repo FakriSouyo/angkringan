@@ -182,7 +182,7 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
       ].map((item) => (
         <button
           key={item.key}
-          onClick={() => item.key === "Menu" ? navigate('/full-menu') : handleNavigation('/', eval(`${item.key.toLowerCase()}Ref`))}
+          onClick={() => item.key === "Menu" ? navigate('/fullmenu') : handleNavigation('/', eval(`${item.key.toLowerCase()}Ref`))}
           className="text-primary hover:text-accent transition-colors duration-200"
         >
           {item.label}
@@ -330,7 +330,7 @@ export default function Navbar({ session, setIsCartOpen, openLoginModal, cartIte
                     key={item.key}
                     onClick={() => {
                       if (item.key === "Menu") {
-                        navigate('/full-menu');
+                        navigate('/fullmenu');
                       } else {
                         handleNavigation('/', eval(`${item.key.toLowerCase()}Ref`));
                       }
