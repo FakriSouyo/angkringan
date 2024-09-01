@@ -8,10 +8,13 @@ const PaymentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProofOfPayment, setShowProofOfPayment] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 5; // Ubah limit menjadi 5
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [currentPage]);
 
   const getImageUrl = (imageUrl) => {
     if (imageUrl && imageUrl.startsWith('http')) {
@@ -25,7 +28,7 @@ const PaymentManagement = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('orders')
         .select(`
           *,
@@ -37,8 +40,9 @@ const PaymentManagement = () => {
             menu_items (id, title)
           ),
           proof_of_payment_url
-        `)
-        .order('created_at', { ascending: false });
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
 
       if (error) throw error;
 
@@ -48,6 +52,7 @@ const PaymentManagement = () => {
           proof_of_payment_url: getImageUrl(order.proof_of_payment_url)
         }));
         setOrders(processedData);
+        setTotalPages(Math.ceil(count / itemsPerPage));
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -164,6 +169,43 @@ const PaymentManagement = () => {
     </div>
   );
 
+  const renderPagination = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`px-3 py-1 mx-1 rounded ${
+            currentPage === i ? 'bg-primary text-white' : 'bg-gray-200'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+        >
+          Prev
+        </button>
+        {pageNumbers}
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -236,6 +278,7 @@ const PaymentManagement = () => {
           </tbody>
         </table>
       </div>
+      {renderPagination()}
       {selectedOrder && !showProofOfPayment && renderOrderDetails(selectedOrder)}
       {selectedOrder && showProofOfPayment && renderProofOfPayment(selectedOrder)}
     </div>

@@ -96,37 +96,40 @@ export default function Menu({ session, limit = 6, addToCart }) {
               key={item.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
               transition={{ duration: 0.8, delay: index * 0.1 }}
-              className="bg-card rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
+              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col" // Hapus border, shadow sudah ada
             >
-              <img 
-                src={item.image_url} 
-                alt={item.title} 
-                className="w-full h-36 sm:h-48 object-contain"
-              />
-              <div className="p-4 sm:p-6 flex-grow flex flex-col">
-                <h3 className="text-lg sm:text-xl font-bold text-card-foreground mb-2">{item.title}</h3>
-                <p className="text-sm sm:text-base text-muted-foreground mb-3 sm:mb-4 flex-grow">{item.description}</p>
-                <p className="text-primary font-bold text-base sm:text-lg mb-3 sm:mb-4">Rp {item.price.toLocaleString()}</p>
+              <div className="bg-white p-4">
+                <img 
+                  src={item.image_url} 
+                  alt={item.title} 
+                  className="w-full h-36 sm:h-48 object-contain" // Kembalikan ke ukuran semula
+                />
+              </div>
+              <div className="p-4 sm:p-6 flex-grow flex flex-col bg-black text-white">
+                <h3 className="text-lg sm:text-xl font-bold mb-2">{item.title}</h3>
+                <p className="text-sm sm:text-base text-gray-300 mb-3 sm:mb-4 flex-grow">{item.description}</p>
+                <p className="font-bold text-base sm:text-lg mb-3 sm:mb-4">Rp {item.price.toLocaleString()}</p>
                 <div className="flex items-center justify-between mt-auto">
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={() => handleDecrement(item.id)}
-                      className="bg-primary text-primary-foreground rounded-full p-1 hover:bg-primary/80 transition-colors duration-200"
+                      className="bg-white text-black rounded-full p-1 hover:bg-gray-200 transition-colors duration-200"
                     >
                       <FiMinus className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <span className="font-bold text-sm sm:text-base">{quantities[item.id]}</span>
                     <button 
                       onClick={() => handleIncrement(item.id)}
-                      className="bg-primary text-primary-foreground rounded-full p-1 hover:bg-primary/80 transition-colors duration-200"
+                      className="bg-white text-black rounded-full p-1 hover:bg-gray-200 transition-colors duration-200"
                     >
                       <FiPlus className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   </div>
                   <button 
                     onClick={() => handleAddToCart(item.id)}
-                    className="flex items-center space-x-1 sm:space-x-2 bg-primary text-primary-foreground px-3 py-1 sm:px-4 sm:py-2 rounded-full hover:bg-primary/80 transition-colors duration-200 text-sm sm:text-base"
+                    className="flex items-center space-x-1 sm:space-x-2 bg-white text-black px-3 py-1 sm:px-4 sm:py-2 rounded-full hover:bg-gray-200 transition-colors duration-200 text-sm sm:text-base"
                   >
                     <FiShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>

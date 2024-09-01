@@ -110,10 +110,31 @@ const FullMenu = ({ addToCart }) => {
             className="w-full pl-10 pr-4 py-2 border rounded-md"
           />
         </div>
+        <div className="hidden sm:flex space-x-2 bg-gray-100 p-1 rounded-full">
+          <button
+            onClick={() => setSelectedCategory('All')}
+            className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+              selectedCategory === 'All' ? 'bg-primary text-white' : 'hover:bg-gray-200'
+            }`}
+          >
+            Semua
+          </button>
+          {categories.map(category => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-2 rounded-full transition-colors duration-200 ${
+                selectedCategory === category ? 'bg-primary text-white' : 'hover:bg-gray-200'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="w-full sm:w-auto border rounded-md px-4 py-2"
+          className="w-full sm:hidden border rounded-md px-4 py-2"
         >
           <option value="All">Kategori</option>
           {categories.map(category => (
@@ -128,37 +149,40 @@ const FullMenu = ({ addToCart }) => {
             key={item.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
             transition={{ duration: 0.8, delay: index * 0.1 }}
-            className="bg-card rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
+            className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 flex flex-col"
           >
-            <img 
-              src={item.image_url} 
-              alt={item.title} 
-              className="w-full h-48 object-contain"
-            />
-            <div className="p-6 flex-grow flex flex-col">
-              <h3 className="text-xl font-bold text-card-foreground mb-2">{item.title}</h3>
-              <p className="text-base text-muted-foreground mb-4 flex-grow">{item.description}</p>
-              <p className="text-primary font-bold text-lg mb-4">Rp {item.price.toLocaleString()}</p>
+            <div className="bg-white p-4">
+              <img 
+                src={item.image_url} 
+                alt={item.title} 
+                className="w-full h-48 object-contain" // Kembalikan ke ukuran semula
+              />
+            </div>
+            <div className="p-6 flex-grow flex flex-col bg-black text-white">
+              <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+              <p className="text-base text-gray-300 mb-4 flex-grow">{item.description}</p>
+              <p className="font-bold text-lg mb-4">Rp {item.price.toLocaleString()}</p>
               <div className="flex items-center justify-between mt-auto">
                 <div className="flex items-center space-x-2">
                   <button 
                     onClick={() => handleDecrement(item.id)}
-                    className="bg-primary text-primary-foreground rounded-full p-1 hover:bg-primary/80 transition-colors duration-200"
+                    className="bg-white text-black rounded-full p-1 hover:bg-gray-200 transition-colors duration-200"
                   >
                     <FiMinus className="w-5 h-5" />
                   </button>
                   <span className="font-bold">{quantities[item.id]}</span>
                   <button 
                     onClick={() => handleIncrement(item.id)}
-                    className="bg-primary text-primary-foreground rounded-full p-1 hover:bg-primary/80 transition-colors duration-200"
+                    className="bg-white text-black rounded-full p-1 hover:bg-gray-200 transition-colors duration-200"
                   >
                     <FiPlus className="w-5 h-5" />
                   </button>
                 </div>
                 <button 
                   onClick={() => handleAddToCart(item.id)}
-                  className="flex items-center space-x-2 bg-primary text-primary-foreground px-4 py-2 rounded-full hover:bg-primary/80 transition-colors duration-200"
+                  className="flex items-center space-x-2 bg-white text-black px-4 py-2 rounded-full hover:bg-gray-200 transition-colors duration-200"
                 >
                   <FiShoppingCart className="w-5 h-5" />
                 </button>
