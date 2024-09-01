@@ -8,9 +8,6 @@ const PaymentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProofOfPayment, setShowProofOfPayment] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const ordersPerPage = 5;
 
   useEffect(() => {
     fetchOrders();
@@ -28,12 +25,6 @@ const PaymentManagement = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { count } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact' });
-
-      setTotalPages(Math.ceil(count / ordersPerPage));
-
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -47,8 +38,7 @@ const PaymentManagement = () => {
           ),
           proof_of_payment_url
         `)
-        .order('created_at', { ascending: false })
-        .range((currentPage - 1) * ordersPerPage, currentPage * ordersPerPage - 1);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -58,6 +48,7 @@ const PaymentManagement = () => {
           proof_of_payment_url: getImageUrl(order.proof_of_payment_url)
         }));
         setOrders(processedData);
+        setTotalPages(Math.ceil(count / itemsPerPage));
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -174,6 +165,43 @@ const PaymentManagement = () => {
     </div>
   );
 
+  const renderPagination = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`px-3 py-1 mx-1 rounded ${
+            currentPage === i ? 'bg-primary text-white' : 'bg-gray-200'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+        >
+          Prev
+        </button>
+        {pageNumbers}
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div>Memuat...</div>;
   }
@@ -245,23 +273,6 @@ const PaymentManagement = () => {
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="mt-4 flex justify-center items-center">
-        <button
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="mr-2 px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50"
-        >
-          <FiChevronLeft />
-        </button>
-        <span>Halaman {currentPage} dari {totalPages}</span>
-        <button
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          className="ml-2 px-3 py-1 bg-gray-200 rounded-md disabled:opacity-50"
-        >
-          <FiChevronRight />
-        </button>
       </div>
       {selectedOrder && !showProofOfPayment && renderOrderDetails(selectedOrder)}
       {selectedOrder && showProofOfPayment && renderProofOfPayment(selectedOrder)}

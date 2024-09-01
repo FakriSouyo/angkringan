@@ -11,7 +11,7 @@ const TransactionHistory = () => {
   const [showProofOfPayment, setShowProofOfPayment] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   useEffect(() => {
     fetchTransactions();
@@ -140,6 +140,43 @@ const TransactionHistory = () => {
     </div>
   );
 
+  const renderPagination = () => {
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(
+        <button
+          key={i}
+          onClick={() => setCurrentPage(i)}
+          className={`px-3 py-1 mx-1 rounded ${
+            currentPage === i ? 'bg-primary text-white' : 'bg-gray-200'
+          }`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    return (
+      <div className="flex justify-center mt-4">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+        >
+          Prev
+        </button>
+        {pageNumbers}
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div>Memuat...</div>;
   }
@@ -199,25 +236,7 @@ const TransactionHistory = () => {
           </tbody>
         </table>
       </div>
-      <div className="mt-4 flex justify-center">
-        <button
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="px-4 py-2 bg-gray-200 rounded-l-md"
-        >
-          Sebelumnya
-        </button>
-        <span className="px-4 py-2 bg-gray-100">
-          Halaman {currentPage} dari {totalPages}
-        </span>
-        <button
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          className="px-4 py-2 bg-gray-200 rounded-r-md"
-        >
-          Selanjutnya
-        </button>
-      </div>
+      {renderPagination()}
       {selectedTransaction && !showProofOfPayment && renderTransactionDetails(selectedTransaction)}
       {selectedTransaction && showProofOfPayment && renderProofOfPayment(selectedTransaction)}
     </div>
