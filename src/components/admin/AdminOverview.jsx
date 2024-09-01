@@ -30,6 +30,18 @@ const AdminOverview = () => {
   const [loading, setLoading] = useState(true);
   const [dailyRevenue, setDailyRevenue] = useState([]);
   const [topMenuItems, setTopMenuItems] = useState([]);
+  const [error, setError] = useState(null);
+
+  const fetchWithRetry = async (fetcher, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fetcher();
+      } catch (error) {
+        if (i === maxRetries - 1) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+      }
+    }
+  };
 
   useEffect(() => {
     fetchOverviewData();
@@ -40,41 +52,37 @@ const AdminOverview = () => {
   const fetchOverviewData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Fetch total revenue
-      const { data: revenueData, error: revenueError } = await supabase
-        .from('orders')
-        .select('total_amount')
-        .eq('payment_status', 'paid');
-      if (revenueError) throw revenueError;
+      const { data: revenueData } = await fetchWithRetry(() => 
+        supabase.from('orders').select('total_amount').eq('payment_status', 'paid')
+      );
       const revenue = revenueData.reduce((sum, order) => sum + order.total_amount, 0);
       setTotalRevenue(revenue);
 
       // Fetch total items sold
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select('quantity');
-      if (itemsError) throw itemsError;
+      const { data: itemsData } = await fetchWithRetry(() => 
+        supabase.from('order_items').select('quantity')
+      );
       const itemsSold = itemsData.reduce((sum, item) => sum + item.quantity, 0);
       setTotalItemsSold(itemsSold);
 
       // Fetch total users
-      const { count: usersCount, error: usersError } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true });
-      if (usersError) throw usersError;
+      const { count: usersCount } = await fetchWithRetry(() => 
+        supabase.from('profiles').select('id', { count: 'exact', head: true })
+      );
       setTotalUsers(usersCount);
 
       // Fetch active orders
-      const { count: ordersCount, error: ordersError } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending');
-      if (ordersError) throw ordersError;
+      const { count: ordersCount } = await fetchWithRetry(() => 
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      );
       setActiveOrders(ordersCount);
 
     } catch (error) {
       console.error('Error fetching overview data:', error);
+      setError('Failed to load overview data. Please try again later.');
       toast.error('Gagal memuat data ikhtisar');
     } finally {
       setLoading(false);
@@ -83,11 +91,9 @@ const AdminOverview = () => {
 
   const fetchDailyRevenue = async () => {
     try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('created_at, total_amount')
-        .eq('payment_status', 'paid')
-        .order('created_at', { ascending: true });
+      const { data, error } = await fetchWithRetry(() => 
+        supabase.from('orders').select('created_at, total_amount').eq('payment_status', 'paid').order('created_at', { ascending: true })
+      );
 
       if (error) throw error;
 
@@ -106,11 +112,9 @@ const AdminOverview = () => {
 
   const fetchTopMenuItems = async () => {
     try {
-      const { data, error } = await supabase
-        .from('order_items')
-        .select('menu_items(title), quantity')
-        .order('quantity', { ascending: false })
-        .limit(5);
+      const { data, error } = await fetchWithRetry(() => 
+        supabase.from('order_items').select('menu_items(title), quantity').order('quantity', { ascending: false }).limit(5)
+      );
 
       if (error) throw error;
 
@@ -150,9 +154,8 @@ const AdminOverview = () => {
     }
   };
 
-  if (loading) {
-    return <div>Memuat...</div>;
-  }
+  if (loading) return <div>Memuat...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="space-y-6">

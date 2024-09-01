@@ -8,6 +8,9 @@ const PaymentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showProofOfPayment, setShowProofOfPayment] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 10; // Anda bisa menyesuaikan jumlah item per halaman
 
   useEffect(() => {
     fetchOrders();
@@ -25,7 +28,7 @@ const PaymentManagement = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('orders')
         .select(`
           *,
@@ -37,7 +40,8 @@ const PaymentManagement = () => {
             menu_items (id, title)
           ),
           proof_of_payment_url
-        `)
+        `, { count: 'exact' })
+        .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -188,7 +192,7 @@ const PaymentManagement = () => {
           disabled={currentPage === 1}
           className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
         >
-          Prev
+          <FiChevronLeft />
         </button>
         {pageNumbers}
         <button
@@ -196,7 +200,7 @@ const PaymentManagement = () => {
           disabled={currentPage === totalPages}
           className="px-3 py-1 mx-1 rounded bg-gray-200 disabled:opacity-50"
         >
-          Next
+          <FiChevronRight />
         </button>
       </div>
     );
@@ -274,6 +278,7 @@ const PaymentManagement = () => {
           </tbody>
         </table>
       </div>
+      {renderPagination()}
       {selectedOrder && !showProofOfPayment && renderOrderDetails(selectedOrder)}
       {selectedOrder && showProofOfPayment && renderProofOfPayment(selectedOrder)}
     </div>

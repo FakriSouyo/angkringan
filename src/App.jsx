@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 import { supabase } from "./services/supabase";
-import Navbar from "./components/Navbar";
+import ErrorBoundary from './components/ErrorBoundary';
+import AdminNavbar from "./components/AdminNavbar";
+import UserNavbar from "./components/UserNavbar";
 import Home from "./components/Home";
 import About from "./components/About";
 import Menu from "./components/Menu";
@@ -22,6 +24,7 @@ function App() {
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [activeAdminTab, setActiveAdminTab] = useState('overview');
+  const [userName, setUserName] = useState('');
 
   const homeRef = useRef(null);
   const aboutRef = useRef(null);
@@ -33,6 +36,7 @@ function App() {
       setSession(session);
       if (session) {
         checkAdminStatus(session.user.id);
+        fetchUserName(session.user.id);
       }
     });
 
@@ -40,8 +44,10 @@ function App() {
       setSession(session);
       if (session) {
         checkAdminStatus(session.user.id);
+        fetchUserName(session.user.id);
       } else {
         setIsAdmin(false);
+        setUserName('');
       }
     });
 
@@ -61,6 +67,22 @@ function App() {
     } catch (error) {
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
+    }
+  };
+
+  const fetchUserName = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserName(data.name || 'User');
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+      setUserName('User');
     }
   };
 
@@ -124,91 +146,106 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="App">
-        <Toaster position="top-center" reverseOrder={false} />
-        <Navbar
-          session={session}
-          openLoginModal={() => setIsLoginOpen(true)}
-          setIsCartOpen={setIsCartOpen}
-          cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-          scrollToSection={scrollToSection}
-          homeRef={homeRef}
-          aboutRef={aboutRef}
-          menuRef={menuRef}
-          contactRef={contactRef}
-          isAdmin={isAdmin}
-          setActiveTab={handleAdminTabChange}
-        />
-        <Routes>
-          <Route path="/" element={
-            session && isAdmin ? <Navigate to="/admin/dashboard" replace /> : (
-              <>
-                <div ref={homeRef}><Home /></div>
-                <div ref={aboutRef}><About /></div>
-                <div ref={menuRef}><Menu limit={6} addToCart={addToCart} /></div>
-                <div ref={contactRef}><Contact /></div>
-                <Footer 
-                  scrollToSection={scrollToSection}
-                  homeRef={homeRef}
-                  aboutRef={aboutRef}
-                  menuRef={menuRef}
-                  contactRef={contactRef}
-                />
-              </>
-            )
-          } />
-          <Route path="/fullmenu" element={
-            <>
-              <FullMenu addToCart={addToCart} />
-              <Footer 
-                scrollToSection={scrollToSection}
-                homeRef={homeRef}
-                aboutRef={aboutRef}
-                menuRef={menuRef}
-                contactRef={contactRef}
-              />
-            </>
-          } />
-          <Route 
-            path="/admin/dashboard" 
-            element={
-              isAdmin ? (
-                <div className="pt-0">
-                  <AdminDashboard activeTab={activeAdminTab} />
-                </div>
-              ) : <Navigate to="/" replace />
-            } 
+    <ErrorBoundary>
+      <Router>
+        <div className="App">
+          <Toaster position="top-center" reverseOrder={false} />
+          {isAdmin ? (
+            <AdminNavbar 
+              userName={userName}
+              setActiveTab={handleAdminTabChange}
+            />
+          ) : (
+            <UserNavbar
+              session={session}
+              userName={userName}
+              cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+              openLoginModal={() => setIsLoginOpen(true)}
+              setIsCartOpen={setIsCartOpen}
+              scrollToSection={scrollToSection}
+              homeRef={homeRef}
+              aboutRef={aboutRef}
+              menuRef={menuRef}
+              contactRef={contactRef}
+              notifications={[]}
+              setIsProfileOpen={() => {}}
+              handleTransactionHistoryClick={() => {}}
+            />
+          )}
+          <Routes>
+            <Route path="/" element={
+              session && isAdmin ? <Navigate to="/admin" replace /> : (
+                <ErrorBoundary>
+                  <>
+                    <div ref={homeRef}><Home /></div>
+                    <div ref={aboutRef}><About /></div>
+                    <div ref={menuRef}><Menu limit={6} addToCart={addToCart} /></div>
+                    <div ref={contactRef}><Contact /></div>
+                    <Footer 
+                      scrollToSection={scrollToSection}
+                      homeRef={homeRef}
+                      aboutRef={aboutRef}
+                      menuRef={menuRef}
+                      contactRef={contactRef}
+                    />
+                  </>
+                </ErrorBoundary>
+              )
+            } />
+            <Route path="/fullmenu" element={
+              <ErrorBoundary>
+                <>
+                  <FullMenu addToCart={addToCart} />
+                  <Footer 
+                    scrollToSection={scrollToSection}
+                    homeRef={homeRef}
+                    aboutRef={aboutRef}
+                    menuRef={menuRef}
+                    contactRef={contactRef}
+                  />
+                </>
+              </ErrorBoundary>
+            } />
+            <Route 
+              path="/admin/*" 
+              element={
+                isAdmin ? (
+                  <ErrorBoundary>
+                    <AdminDashboard activeTab={activeAdminTab} />
+                  </ErrorBoundary>
+                ) : <Navigate to="/" replace />
+              } 
+            />
+          </Routes>
+          <Cart
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            session={session}
+            openLoginModal={() => setIsLoginOpen(true)}
+            cartItems={cartItems}
+            removeFromCart={removeFromCart}
+            clearCart={clearCart}
           />
-        </Routes>
-        <Cart
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          session={session}
-          openLoginModal={() => setIsLoginOpen(true)}
-          cartItems={cartItems}
-          removeFromCart={removeFromCart}
-          clearCart={clearCart}
-        />
-        <Login
-          isOpen={isLoginOpen}
-          onClose={() => setIsLoginOpen(false)}
-          onSwitchToSignup={() => {
-            setIsLoginOpen(false);
-            setIsSignupOpen(true);
-          }}
-          onLoginSuccess={handleLoginSuccess}
-        />
-        <Signup
-          isOpen={isSignupOpen}
-          onClose={() => setIsSignupOpen(false)}
-          onSwitchToLogin={() => {
-            setIsSignupOpen(false);
-            setIsLoginOpen(true);
-          }}
-        />
-      </div>
-    </Router>
+          <Login
+            isOpen={isLoginOpen}
+            onClose={() => setIsLoginOpen(false)}
+            onSwitchToSignup={() => {
+              setIsLoginOpen(false);
+              setIsSignupOpen(true);
+            }}
+            onLoginSuccess={handleLoginSuccess}
+          />
+          <Signup
+            isOpen={isSignupOpen}
+            onClose={() => setIsSignupOpen(false)}
+            onSwitchToLogin={() => {
+              setIsSignupOpen(false);
+              setIsLoginOpen(true);
+            }}
+          />
+        </div>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
