@@ -47,7 +47,7 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
         password,
         options: {
           data: {
-            full_name: name,
+            name: name,
             phone_number: phoneNumber,
           }
         }
