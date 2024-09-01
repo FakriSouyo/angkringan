@@ -21,11 +21,15 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
       toast.error('Email tidak valid');
       return false;
     }
-    if (password.length < 6) {
-      toast.error('Password harus minimal 6 karakter');
+    if (password.length < 8) {
+      toast.error('Password harus minimal 8 karakter');
       return false;
     }
-    if (!phoneNumber.trim() || !/^\d+$/.test(phoneNumber)) {
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      toast.error('Password harus mengandung huruf besar, huruf kecil, dan angka');
+      return false;
+    }
+    if (!phoneNumber.trim() || !/^(\+62|62|0)8[1-9][0-9]{6,9}$/.test(phoneNumber)) {
       toast.error('Nomor telepon tidak valid');
       return false;
     }
@@ -35,37 +39,33 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     setLoading(true);
     try {
-      // Daftar pengguna baru
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name,
+            full_name: name,
             phone_number: phoneNumber,
           }
         }
       });
-
+  
       if (error) throw error;
-
+  
       if (data && data.user) {
-        // Tambahkan data ke tabel profile
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert([
-            {
-              id: data.user.id,
-              name,
-              phone_number: phoneNumber,
-            }
-          ], { onConflict: 'id' });
-
+          .upsert({
+            id: data.user.id,
+            full_name: name,
+            phone_number: phoneNumber,
+          }, { onConflict: 'id' });
+  
         if (profileError) throw profileError;
-
+  
         toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi akun.');
         onClose();
       } else {
@@ -73,7 +73,11 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
       }
     } catch (error) {
       console.error('Error during signup:', error);
-      toast.error(error.message || 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
+      if (error.message.includes('User already registered')) {
+        toast.error('Email sudah terdaftar. Silakan gunakan email lain atau coba login.');
+      } else {
+        toast.error(error.message || 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
+      }
     } finally {
       setLoading(false);
     }
