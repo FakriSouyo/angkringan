@@ -15,7 +15,7 @@ const Footer = ({ scrollToSection, homeRef, aboutRef, menuRef, contactRef }) => 
   };
 
   return (
-    <footer className="bg-gray-800 text-white py-8">
+    <footer className="bg-black text-white py-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
@@ -30,7 +30,7 @@ const Footer = ({ scrollToSection, homeRef, aboutRef, menuRef, contactRef }) => 
             <p>Pamulang, Tangerang Selatan</p>
           </div>
           <div>
-            <h3 className="text-xl font-bold mb-4">Navigasi</h3>
+            <h3 className="text-xl font-bold mb-4">Konten</h3>
             <ul>
               <li className="mb-2">
                 <button onClick={() => handleNavigation('/', homeRef)} className="hover:text-gray-300">Beranda</button>
@@ -48,7 +48,7 @@ const Footer = ({ scrollToSection, homeRef, aboutRef, menuRef, contactRef }) => 
           </div>
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 text-center">
-          <p>© 2024 Angkringan. Hak Cipta Dilindungi.</p>
+          <p>© 2024 Mas Pithik. Hak Cipta Dilindungi.</p>
         </div>
       </div>
     </footer>
