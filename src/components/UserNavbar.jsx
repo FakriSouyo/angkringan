@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiUser, FiLogOut, FiFileText, FiShoppingCart } from "react-icons/fi";
 import { supabase } from '../services/supabase';
@@ -7,15 +7,20 @@ import { supabase } from '../services/supabase';
 const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCartOpen, scrollToSection, homeRef, aboutRef, menuRef, contactRef, notifications, setIsProfileOpen, handleTransactionHistoryClick }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
   };
 
-  const handleNavigation = useCallback((ref) => {
-    scrollToSection(ref);
-  }, [scrollToSection]);
+  const handleNavigation = useCallback((ref, section) => {
+    if (location.pathname === '/fullmenu') {
+      navigate('/', { state: { scrollTo: section } });
+    } else {
+      scrollToSection(ref);
+    }
+  }, [scrollToSection, navigate, location.pathname]);
 
   return (
     <>
@@ -25,10 +30,10 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
           <span className="text-2xl font-bold text-primary">Mas Pithik</span>
         </Link>
         <div className="flex items-center gap-6">
-          <button onClick={() => handleNavigation(homeRef)} className="text-primary hover:text-accent transition-colors duration-200">Beranda</button>
-          <button onClick={() => handleNavigation(aboutRef)} className="text-primary hover:text-accent transition-colors duration-200">Tentang</button>
+          <button onClick={() => handleNavigation(homeRef, 'home')} className="text-primary hover:text-accent transition-colors duration-200">Beranda</button>
+          <button onClick={() => handleNavigation(aboutRef, 'about')} className="text-primary hover:text-accent transition-colors duration-200">Tentang</button>
           <button onClick={() => navigate('/fullmenu')} className="text-primary hover:text-accent transition-colors duration-200">Menu</button>
-          <button onClick={() => handleNavigation(contactRef)} className="text-primary hover:text-accent transition-colors duration-200">Kontak</button>
+          <button onClick={() => handleNavigation(contactRef, 'contact')} className="text-primary hover:text-accent transition-colors duration-200">Kontak</button>
           {session ? (
             <div className="relative">
               <button

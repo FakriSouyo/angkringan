@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 import { supabase } from "./services/supabase";
 import ErrorBoundary from './components/ErrorBoundary';
@@ -15,6 +15,7 @@ import Login from "./components/Login";
 import Signup from "./components/Signup";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import Footer from "./components/Footer";
+import NotFound from "./components/NotFound";
 
 function App() {
   const [session, setSession] = useState(null);
@@ -87,14 +88,8 @@ function App() {
   };
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      const storedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-      setCartItems(storedCart);
-      updateCartNotification(storedCart);
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    const storedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    setCartItems(storedCart);
   }, []);
 
   const addToCart = (item) => {
@@ -108,7 +103,6 @@ function App() {
         updatedItems = [...prevItems, item];
       }
       localStorage.setItem('cart', JSON.stringify(updatedItems));
-      updateCartNotification(updatedItems);
       return updatedItems;
     });
   };
@@ -117,7 +111,6 @@ function App() {
     setCartItems(prevItems => {
       const updatedCart = prevItems.filter(item => item.menu_item_id !== id);
       localStorage.setItem('cart', JSON.stringify(updatedCart));
-      updateCartNotification(updatedCart);
       return updatedCart;
     });
   };
@@ -125,12 +118,6 @@ function App() {
   const clearCart = () => {
     setCartItems([]);
     localStorage.removeItem('cart');
-    updateCartNotification([]);
-  };
-
-  const updateCartNotification = (items) => {
-    const count = items.reduce((sum, item) => sum + item.quantity, 0);
-    window.dispatchEvent(new CustomEvent('cartUpdate', { detail: count }));
   };
 
   const scrollToSection = (ref) => {
@@ -141,82 +128,150 @@ function App() {
     setIsAdmin(adminStatus);
   };
 
-  const handleAdminTabChange = (tab) => {
-    setActiveAdminTab(tab);
-  };
-
   return (
     <ErrorBoundary>
       <Router>
-        <div className="App">
-          <Toaster position="top-center" reverseOrder={false} />
-          {isAdmin ? (
-            <AdminNavbar 
-              userName={userName}
-              setActiveTab={handleAdminTabChange}
-            />
-          ) : (
-            <UserNavbar
-              session={session}
-              userName={userName}
-              cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-              openLoginModal={() => setIsLoginOpen(true)}
-              setIsCartOpen={setIsCartOpen}
-              scrollToSection={scrollToSection}
-              homeRef={homeRef}
-              aboutRef={aboutRef}
-              menuRef={menuRef}
-              contactRef={contactRef}
-              notifications={[]}
-              setIsProfileOpen={() => {}}
-              handleTransactionHistoryClick={() => {}}
-            />
-          )}
-          <Routes>
-            <Route path="/" element={
-              session && isAdmin ? <Navigate to="/admin" replace /> : (
-                <ErrorBoundary>
-                  <>
-                    <div ref={homeRef}><Home /></div>
-                    <div ref={aboutRef}><About /></div>
-                    <div ref={menuRef}><Menu limit={6} addToCart={addToCart} /></div>
-                    <div ref={contactRef}><Contact /></div>
-                    <Footer 
-                      scrollToSection={scrollToSection}
-                      homeRef={homeRef}
-                      aboutRef={aboutRef}
-                      menuRef={menuRef}
-                      contactRef={contactRef}
-                    />
-                  </>
-                </ErrorBoundary>
-              )
-            } />
-            <Route path="/fullmenu" element={
+        <AppContent
+          session={session}
+          isAdmin={isAdmin}
+          userName={userName}
+          isCartOpen={isCartOpen}
+          setIsCartOpen={setIsCartOpen}
+          isLoginOpen={isLoginOpen}
+          setIsLoginOpen={setIsLoginOpen}
+          isSignupOpen={isSignupOpen}
+          setIsSignupOpen={setIsSignupOpen}
+          cartItems={cartItems}
+          activeAdminTab={activeAdminTab}
+          setActiveAdminTab={setActiveAdminTab}
+          homeRef={homeRef}
+          aboutRef={aboutRef}
+          menuRef={menuRef}
+          contactRef={contactRef}
+          scrollToSection={scrollToSection}
+          addToCart={addToCart}
+          removeFromCart={removeFromCart}
+          clearCart={clearCart}
+          handleLoginSuccess={handleLoginSuccess}
+        />
+      </Router>
+    </ErrorBoundary>
+  );
+}
+
+function AppContent({
+  session,
+  isAdmin,
+  userName,
+  isCartOpen,
+  setIsCartOpen,
+  isLoginOpen,
+  setIsLoginOpen,
+  isSignupOpen,
+  setIsSignupOpen,
+  cartItems,
+  activeAdminTab,
+  setActiveAdminTab,
+  homeRef,
+  aboutRef,
+  menuRef,
+  contactRef,
+  scrollToSection,
+  addToCart,
+  removeFromCart,
+  clearCart,
+  handleLoginSuccess
+}) {
+  const location = useLocation();
+  const isNotFoundPage = location.pathname === "*";
+
+  useEffect(() => {
+    if (location.state && location.state.scrollTo) {
+      const section = location.state.scrollTo;
+      if (section === 'home') scrollToSection(homeRef);
+      if (section === 'about') scrollToSection(aboutRef);
+      if (section === 'contact') scrollToSection(contactRef);
+      // Clear the state after scrolling
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  const renderNavbar = () => {
+    if (location.pathname === "*") return null;
+    return isAdmin ? (
+      <AdminNavbar 
+        userName={userName}
+        setActiveTab={setActiveAdminTab}
+      />
+    ) : (
+      <UserNavbar
+        session={session}
+        userName={userName}
+        cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+        openLoginModal={() => setIsLoginOpen(true)}
+        setIsCartOpen={setIsCartOpen}
+        scrollToSection={scrollToSection}
+        homeRef={homeRef}
+        aboutRef={aboutRef}
+        menuRef={menuRef}
+        contactRef={contactRef}
+        notifications={[]}
+        setIsProfileOpen={() => {}}
+        handleTransactionHistoryClick={() => {}}
+      />
+    );
+  };
+
+  return (
+    <div className="App">
+      <Toaster position="top-center" reverseOrder={false} />
+      {renderNavbar()}
+      <Routes>
+        <Route path="/" element={
+          <ErrorBoundary>
+            <>
+              <div ref={homeRef}><Home /></div>
+              <div ref={aboutRef}><About /></div>
+              <div ref={menuRef}><Menu limit={6} addToCart={addToCart} /></div>
+              <div ref={contactRef}><Contact /></div>
+              <Footer 
+                scrollToSection={scrollToSection}
+                homeRef={homeRef}
+                aboutRef={aboutRef}
+                menuRef={menuRef}
+                contactRef={contactRef}
+              />
+            </>
+          </ErrorBoundary>
+        } />
+        <Route path="/fullmenu" element={
+          <ErrorBoundary>
+            <>
+              <FullMenu addToCart={addToCart} />
+              <Footer 
+                scrollToSection={scrollToSection}
+                homeRef={homeRef}
+                aboutRef={aboutRef}
+                menuRef={menuRef}
+                contactRef={contactRef}
+              />
+            </>
+          </ErrorBoundary>
+        } />
+        <Route 
+          path="/admin/*" 
+          element={
+            isAdmin ? (
               <ErrorBoundary>
-                <>
-                  <FullMenu addToCart={addToCart} />
-                  <Footer 
-                    scrollToSection={scrollToSection}
-                    homeRef={homeRef}
-                    aboutRef={aboutRef}
-                    menuRef={menuRef}
-                    contactRef={contactRef}
-                  />
-                </>
+                <AdminDashboard activeTab={activeAdminTab} />
               </ErrorBoundary>
-            } />
-            <Route 
-              path="/admin/*" 
-              element={
-                isAdmin ? (
-                  <ErrorBoundary>
-                    <AdminDashboard activeTab={activeAdminTab} />
-                  </ErrorBoundary>
-                ) : <Navigate to="/" replace />
-              } 
-            />
-          </Routes>
+            ) : <Navigate to="/" replace />
+          } 
+        />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      {!isNotFoundPage && (
+        <>
           <Cart
             isOpen={isCartOpen}
             onClose={() => setIsCartOpen(false)}
@@ -243,9 +298,9 @@ function App() {
               setIsLoginOpen(true);
             }}
           />
-        </div>
-      </Router>
-    </ErrorBoundary>
+        </>
+      )}
+    </div>
   );
 }
 
