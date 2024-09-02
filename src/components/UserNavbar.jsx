@@ -1,14 +1,69 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiUser, FiLogOut, FiFileText, FiShoppingCart, FiMenu, FiX } from "react-icons/fi";
+import { FiUser, FiLogOut, FiFileText, FiShoppingCart, FiMenu, FiX, FiBell } from "react-icons/fi";
 import { supabase } from '../services/supabase';
 
-const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCartOpen, scrollToSection, homeRef, aboutRef, menuRef, contactRef, notifications, setIsProfileOpen, handleTransactionHistoryClick }) => {
+const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCartOpen, scrollToSection, homeRef, aboutRef, menuRef, contactRef, setIsProfileOpen, handleTransactionHistoryClick }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const fetchNotifications = useCallback(async () => {
+    if (session) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('read', false)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+      } else {
+        setNotifications(data);
+      }
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (session) {
+      fetchNotifications();
+
+      // Set up realtime subscription
+      const channel = supabase
+        .channel('custom-all-channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications' },
+          (payload) => {
+            console.log('Change received!', payload);
+            if (payload.new.user_id === session.user.id) {
+              if (payload.eventType === 'INSERT') {
+                setNotifications((prev) => [payload.new, ...prev]);
+              } else if (payload.eventType === 'UPDATE') {
+                setNotifications((prev) =>
+                  prev.map((notif) =>
+                    notif.id === payload.new.id ? payload.new : notif
+                  )
+                );
+              } else if (payload.eventType === 'DELETE') {
+                setNotifications((prev) =>
+                  prev.filter((notif) => notif.id !== payload.old.id)
+                );
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [session, fetchNotifications]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -23,6 +78,27 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
     }
     setIsMobileMenuOpen(false);
   }, [scrollToSection, navigate, location.pathname]);
+
+  const clearNotifications = useCallback(async () => {
+    if (session) {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', session.user.id);
+
+      if (error) {
+        console.error('Error clearing notifications:', error);
+      } else {
+        setNotifications([]);
+      }
+    }
+  }, [session]);
+
+  const handleTransactionHistoryButtonClick = useCallback(() => {
+    handleTransactionHistoryClick();
+    clearNotifications();
+    setIsDropdownOpen(false);
+  }, [handleTransactionHistoryClick, clearNotifications]);
 
   const NavItems = ({ isMobile }) => (
     <>
@@ -92,10 +168,7 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
                   </button>
                   <button
                     className="flex items-center w-full text-left px-4 py-2 text-sm text-primary hover:bg-accent/10"
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      handleTransactionHistoryClick();
-                    }}
+                    onClick={handleTransactionHistoryButtonClick}
                   >
                     <FiFileText className="mr-2" />
                     Riwayat Transaksi
@@ -158,14 +231,22 @@ const UserNavbar = ({ session, userName, cartItemCount, openLoginModal, setIsCar
                   <button
                     onClick={() => {
                       setIsMobileMenuOpen(false);
-                      handleTransactionHistoryClick();
+                      handleTransactionHistoryButtonClick();
                     }}
                     className="w-full text-left px-4 py-2 text-primary hover:text-white hover:bg-black transition-colors duration-200"
                   >
                     Riwayat Transaksi
+                    {notifications.length > 0 && (
+                      <span className="ml-2 bg-red-500 text-white rounded-full w-5 h-5 inline-flex items-center justify-center text-xs">
+                        {notifications.length}
+                      </span>
+                    )}
                   </button>
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      handleLogout();
+                    }}
                     className="w-full text-left px-4 py-2 text-primary hover:text-white hover:bg-black transition-colors duration-200"
                   >
                     Keluar

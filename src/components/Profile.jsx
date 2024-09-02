@@ -1,22 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiSave, FiUser, FiPhone, FiMail } from 'react-icons/fi';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 const Profile = ({ isOpen, onClose, session }) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (session && isOpen) {
-      fetchProfile();
+  const fetchProfile = useCallback(async () => {
+    if (!session || !session.user) {
+      setLoading(false);
+      return;
     }
-  }, [session, isOpen]);
 
-  const fetchProfile = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -26,30 +23,40 @@ const Profile = ({ isOpen, onClose, session }) => {
         .single();
 
       if (error) throw error;
-
-      setName(data.name || '');
-      setPhoneNumber(data.phone_number || '');
-      setEmail(session.user.email);
+      setProfile(data || { name: '', phone_number: '' });
     } catch (error) {
+      console.error('Error fetching profile:', error);
       toast.error('Error fetching profile');
     } finally {
       setLoading(false);
     }
-  };
+  }, [session]);
+
+  useEffect(() => {
+    if (isOpen && session) {
+      fetchProfile();
+    }
+  }, [fetchProfile, isOpen, session]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!session || !session.user) {
+      toast.error('User session not found');
+      return;
+    }
+
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
-        .upsert({ id: session.user.id, name, phone_number: phoneNumber });
+        .upsert({ 
+          id: session.user.id, 
+          ...profile,
+          email: session.user.email,
+          updated_at: new Date().toISOString()
+        });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-      console.log('Profile updated:', data);
+      if (error) throw error;
       toast.success('Profile updated successfully');
       onClose();
     } catch (error) {
@@ -59,6 +66,14 @@ const Profile = ({ isOpen, onClose, session }) => {
       setLoading(false);
     }
   };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  if (!session || !session.user) return null;
+  if (loading && !profile) return <div>Loading...</div>;
 
   return (
     <AnimatePresence>
@@ -93,8 +108,9 @@ const Profile = ({ isOpen, onClose, session }) => {
                   <input
                     type="text"
                     id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    name="name"
+                    value={profile?.name || ''}
+                    onChange={handleInputChange}
                     className="w-full pl-10 pr-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter your name"
                   />
@@ -109,23 +125,24 @@ const Profile = ({ isOpen, onClose, session }) => {
                   <input
                     type="email"
                     id="email"
-                    value={email}
+                    value={session.user.email}
                     readOnly
                     className="w-full pl-10 pr-3 py-2 border border-input rounded-md bg-gray-100"
                   />
                 </div>
               </div>
               <div>
-                <label htmlFor="phoneNumber" className="block text-sm font-medium text-foreground mb-1">
+                <label htmlFor="phone_number" className="block text-sm font-medium text-foreground mb-1">
                   Phone Number
                 </label>
                 <div className="relative">
                   <FiPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="tel"
-                    id="phoneNumber"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    id="phone_number"
+                    name="phone_number"
+                    value={profile?.phone_number || ''}
+                    onChange={handleInputChange}
                     className="w-full pl-10 pr-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Enter your phone number"
                   />

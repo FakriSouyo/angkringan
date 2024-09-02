@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiUser, FiLock, FiMail, FiPhone, FiEye, FiEyeOff } from 'react-icons/fi';
 import { supabase } from '../services/supabase';
@@ -11,6 +11,40 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  const [cooldownTimer, setCooldownTimer] = useState(() => {
+    const storedCooldownEnd = localStorage.getItem('signupCooldownEnd');
+    if (storedCooldownEnd) {
+      const remainingTime = Math.max(0, parseInt(storedCooldownEnd) - Date.now());
+      return Math.ceil(remainingTime / 1000);
+    }
+    return 0;
+  });
+
+  const COOLDOWN_PERIOD = 3600000; // 1 hour in milliseconds
+
+  useEffect(() => {
+    let timer;
+    if (cooldownTimer > 0) {
+      timer = setInterval(() => {
+        setCooldownTimer((prevTimer) => {
+          const newTimer = prevTimer - 1;
+          if (newTimer <= 0) {
+            localStorage.removeItem('signupCooldownEnd');
+            return 0;
+          }
+          return newTimer;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldownTimer]);
+
+  const setCooldown = () => {
+    const cooldownEnd = Date.now() + COOLDOWN_PERIOD;
+    localStorage.setItem('signupCooldownEnd', cooldownEnd.toString());
+    setCooldownTimer(Math.ceil(COOLDOWN_PERIOD / 1000));
+  };
 
   const validateForm = () => {
     if (!name.trim()) {
@@ -39,48 +73,56 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-  
+
+    if (cooldownTimer > 0) {
+      toast.error(`Silakan tunggu ${formatTime(cooldownTimer)} sebelum mencoba lagi.`);
+      return;
+    }
+
     setLoading(true);
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name: name,
+            full_name: name,
             phone_number: phoneNumber,
           }
         }
       });
-  
+
       if (error) throw error;
-  
+
       if (data && data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            full_name: name,
-            phone_number: phoneNumber,
-          }, { onConflict: 'id' });
-  
-        if (profileError) throw profileError;
-  
         toast.success('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi akun.');
         onClose();
       } else {
-        throw new Error('Pendaftaran gagal. Silakan coba lagi.');
+        throw new Error('Pendaftaran gagal. Data pengguna tidak ditemukan.');
       }
     } catch (error) {
-      console.error('Error during signup:', error);
+      console.error('Signup error:', error);
       if (error.message.includes('User already registered')) {
         toast.error('Email sudah terdaftar. Silakan gunakan email lain atau coba login.');
+      } else if (error.message.includes('Password should be at least 6 characters')) {
+        toast.error('Password harus minimal 6 karakter.');
+      } else if (error.message.includes('Email rate limit exceeded')) {
+        setCooldown();
+        toast.error('Batas percobaan pendaftaran tercapai. Silakan coba lagi dalam 1 jam.');
       } else {
-        toast.error(error.message || 'Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
+        toast.error('Terjadi kesalahan saat mendaftar. Silakan coba lagi.');
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -182,12 +224,20 @@ const Signup = ({ isOpen, onClose, onSwitchToLogin }) => {
                   />
                 </div>
               </div>
+              {cooldownTimer > 0 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Silakan tunggu {formatTime(cooldownTimer)} sebelum mencoba lagi.
+                </p>
+              )}
               <button
                 type="submit"
-                className="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 transition duration-300 flex items-center justify-center"
-                disabled={loading}
+                className={`w-full py-2 rounded-md transition duration-300 flex items-center justify-center
+                  ${cooldownTimer > 0 || loading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+                disabled={loading || cooldownTimer > 0}
               >
-                {loading ? 'Mendaftar...' : 'Daftar'}
+                {loading ? 'Mendaftar...' : cooldownTimer > 0 ? 'Tunggu...' : 'Daftar'}
               </button>
             </form>
             <p className="mt-4 text-sm text-center text-muted-foreground">

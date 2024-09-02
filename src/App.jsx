@@ -18,6 +18,7 @@ import NotFound from "./components/NotFound";
 import TransactionHistory from "./components/TransactionHistory";
 import Profile from "./components/Profile";
 import ErrorBoundary from './components/ErrorBoundary';
+import Notifications from './components/Notifications';
 
 const AppContent = () => {
   const [session, setSession] = useState(null);
@@ -138,9 +139,75 @@ const AppContent = () => {
     setIsAdmin(adminStatus);
   }, []);
 
+  useEffect(() => {
+    if (session) {
+      fetchNotifications();
+      
+      const channel = supabase
+        .channel('custom-all-channel')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications' },
+          handleNotificationChange
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [session]);
+
+  const fetchNotifications = async () => {
+    if (session) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('read', false)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+      } else {
+        setNotifications(data);
+      }
+    }
+  };
+
+  const handleNotificationChange = (payload) => {
+    if (payload.new && payload.new.user_id === session?.user?.id) {
+      if (payload.eventType === 'INSERT') {
+        setNotifications((prev) => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setNotifications((prev) =>
+          prev.map((notif) => (notif.id === payload.new.id ? payload.new : notif))
+        );
+      } else if (payload.eventType === 'DELETE') {
+        setNotifications((prev) => prev.filter((notif) => notif.id !== payload.old.id));
+      }
+    }
+  };
+
+  const clearNotifications = useCallback(async () => {
+    if (session) {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', session.user.id);
+
+      if (error) {
+        console.error('Error clearing notifications:', error);
+      } else {
+        setNotifications([]);
+      }
+    }
+  }, [session]);
+
   const handleTransactionHistoryClick = useCallback(() => {
     setIsTransactionHistoryOpen(true);
-  }, []);
+    clearNotifications();
+  }, [clearNotifications]);
 
   const isNotFoundPage = location.pathname === "/404" || location.pathname === "*";
 
@@ -168,6 +235,7 @@ const AppContent = () => {
             notifications={notifications}
             setIsProfileOpen={setIsProfileOpen}
             handleTransactionHistoryClick={handleTransactionHistoryClick}
+            clearNotifications={clearNotifications}
           />
         )
       )}
