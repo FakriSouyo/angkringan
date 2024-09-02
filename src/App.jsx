@@ -215,7 +215,7 @@ const AppContent = () => {
     <div className="App">
       <Toaster position="top-center" reverseOrder={false} />
       {!isNotFoundPage && (
-        location.pathname.startsWith('/admin') ? (
+        isAdmin ? (
           <AdminNavbar 
             userName={userName}
             setActiveTab={setActiveAdminTab}
@@ -274,9 +274,11 @@ const AppContent = () => {
         <Route 
           path="/admin/*" 
           element={
-            <ErrorBoundary>
-              <AdminDashboard activeTab={activeAdminTab} />
-            </ErrorBoundary>
+            isAdmin ? (
+              <ErrorBoundary>
+                <AdminDashboard activeTab={activeAdminTab} />
+              </ErrorBoundary>
+            ) : <Navigate to="/" replace />
           } 
         />
         <Route path="*" element={<NotFound />} />
